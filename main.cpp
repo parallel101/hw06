@@ -67,6 +67,18 @@ std::vector<T> magicfilter(std::vector<T> const &x, std::vector<T> const &y) {
     return res;
 }
 
+template <class T>
+T scanner(std::vector<T> &x) {
+    TICK(scanner);
+    T ret = 0;
+    for (size_t i = 0; i < x.size(); i++) {
+        ret += x[i];
+        x[i] = ret;
+    }
+    TOCK(scanner);
+    return ret;
+}
+
 int main() {
     size_t n = 1<<26;
     std::vector<float> x(n);
@@ -82,6 +94,9 @@ int main() {
 
     auto arr = magicfilter(x, y);
     std::cout << arr.size() << std::endl;
+
+    scanner(x);
+    std::cout << std::reduce(x.begin(), x.end()) << std::endl;
 
     return 0;
 }
