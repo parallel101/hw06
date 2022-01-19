@@ -4,8 +4,10 @@
 #include <cmath>
 #include <numeric>
 #include <algorithm>
+#include "pod.h"
 #include "ticktock.h"
 #include <tbb/parallel_for.h>
+#include <tbb/parallel_reduce.h>
 
 
 // TODO: 并行化所有这些 for 循环
@@ -25,7 +27,7 @@ std::vector<T> fill(std::vector<T> &arr, Func const &func) {
 }
 
 template <class T>
-void saxpy(T a, std::vector<T> &x, std::vector<T> const &y) {
+void saxpy(T a, std::vector<pod<T>> &x, std::vector<pod<T>> const &y) {
     TICK(saxpy);
 
     tbb::parallel_for(tbb::blocked_range<std::size_t>(0, x.size()), [&](auto r){
@@ -39,12 +41,18 @@ void saxpy(T a, std::vector<T> &x, std::vector<T> const &y) {
 }
 
 template <class T>
-T sqrtdot(std::vector<T> const &x, std::vector<T> const &y) {
+T sqrtdot(std::vector<pod<T>> const &x, std::vector<pod<T>> const &y) {
     TICK(sqrtdot);
-    T ret = 0;
-    for (size_t i = 0; i < std::min(x.size(), y.size()); i++) {
-        ret += x[i] * y[i];
-    }
+    auto ret = tbb::parallel_reduce(tbb::blocked_range<std::size_t>(0, std::min(x.size(), y.size())), 0.f,  [&](auto r, auto local_res){
+        for(auto i = r.begin(); i != r.end(); ++i)
+        {
+            local_res += x[i] * y[i];
+        }
+        return local_res;
+        }, [](auto x, auto y){
+        return x + y;
+    });
+
     ret = std::sqrt(ret);
     TOCK(sqrtdot);
     return ret;
@@ -92,8 +100,8 @@ T scanner(std::vector<T> &x) {
 
 int main() {
     size_t n = 1<<26;
-    std::vector<float> x(n);
-    std::vector<float> y(n);
+    std::vector<pod<float>> x(n);
+    std::vector<pod<float>> y(n);
 
     fill(x, [&] (size_t i) { return std::sin(i); });
     fill(y, [&] (size_t i)  { return std::cos(i); });
