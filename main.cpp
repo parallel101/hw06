@@ -5,15 +5,22 @@
 #include <numeric>
 #include <algorithm>
 #include "ticktock.h"
+#include <tbb/parallel_for.h>
+
 
 // TODO: 并行化所有这些 for 循环
 
 template <class T, class Func>
 std::vector<T> fill(std::vector<T> &arr, Func const &func) {
     TICK(fill);
-    for (size_t i = 0; i < arr.size(); i++) {
-        arr[i] = func(i);
-    }
+    tbb::parallel_for(tbb::blocked_range<std::size_t>(0, arr.size()), [&](const tbb::blocked_range<std::size_t> &r)
+    {
+        for(auto i = r.begin(); i != r.end(); ++i)
+        {
+            arr[i] = func(i);
+        }
+
+    });
     TOCK(fill);
     return arr;
 }
