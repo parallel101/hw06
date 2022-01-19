@@ -8,6 +8,7 @@
 #include "ticktock.h"
 #include <tbb/parallel_for.h>
 #include <tbb/parallel_reduce.h>
+#include <tbb/parallel_scan.h>
 #include <tbb/concurrent_vector.h>
 
 
@@ -85,13 +86,11 @@ auto magicfilter(std::vector<T> const &x, std::vector<T> const &y) {
     TICK(magicfilter);
     tbb::concurrent_vector<T> tmp_res;
 
-    tbb::parallel_for(tbb::blocked_range<std::size_t>(0, std::min(x.size(), y.size())), [&](auto r)
-    {
+    tbb::parallel_for(tbb::blocked_range<std::size_t>(0, std::min(x.size(), y.size())), [&](auto r) {
         std::vector<T> local_res;
         local_res.reserve(r.size());
 
-        for(auto i = r.begin(); i!=r.end(); ++i)
-        {
+        for (auto i = r.begin(); i != r.end(); ++i) {
             if (x[i] > y[i]) {
                 local_res.push_back(x[i]);
             } else if (y[i] > x[i] && y[i] > 0.5f) {
@@ -100,7 +99,7 @@ auto magicfilter(std::vector<T> const &x, std::vector<T> const &y) {
             }
         }
 
-       auto it = tmp_res.grow_by(local_res.size());
+        auto it = tmp_res.grow_by(local_res.size());
         std::copy(local_res.begin(), local_res.end(), it);
     });
 
@@ -115,11 +114,19 @@ auto magicfilter(std::vector<T> const &x, std::vector<T> const &y) {
 template<class T>
 T scanner(std::vector<T> &x) {
     TICK(scanner);
-    T ret = 0;
-    for (size_t i = 0; i < x.size(); i++) {
-        ret += x[i];
-        x[i] = ret;
-    }
+
+    auto ret = tbb::parallel_scan(tbb::blocked_range<std::size_t>(0, x.size()), T{},
+                                  [&](auto r, auto local_res, auto is_final) {
+                                      for (auto i = r.begin(); i != r.end(); ++i) {
+                                          local_res += x[i];
+                                          if (is_final) {
+                                              x[i] = local_res;
+                                          }
+                                      }
+                                      return local_res;
+                                  },
+                                  [](auto x, auto y) { return x + y; });
+
     TOCK(scanner);
     return ret;
 }
