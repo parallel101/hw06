@@ -13,13 +13,12 @@
 template <class T, class Func>
 std::vector<T> fill(std::vector<T> &arr, Func const &func) {
     TICK(fill);
-    tbb::parallel_for(tbb::blocked_range<std::size_t>(0, arr.size()), [&](const tbb::blocked_range<std::size_t> &r)
+    tbb::parallel_for(tbb::blocked_range<std::size_t>(0, arr.size()), [&](auto r)
     {
         for(auto i = r.begin(); i != r.end(); ++i)
         {
             arr[i] = func(i);
         }
-
     });
     TOCK(fill);
     return arr;
@@ -28,9 +27,14 @@ std::vector<T> fill(std::vector<T> &arr, Func const &func) {
 template <class T>
 void saxpy(T a, std::vector<T> &x, std::vector<T> const &y) {
     TICK(saxpy);
-    for (size_t i = 0; i < x.size(); i++) {
-       x[i] = a * x[i] + y[i];
-    }
+
+    tbb::parallel_for(tbb::blocked_range<std::size_t>(0, x.size()), [&](auto r){
+        for(auto i = r.begin(); i != r.end(); ++i)
+        {
+           x[i]  = a * x[i] + y[i];
+        }
+    });
+
     TOCK(saxpy);
 }
 
@@ -92,7 +96,7 @@ int main() {
     std::vector<float> y(n);
 
     fill(x, [&] (size_t i) { return std::sin(i); });
-    fill(y, [&] (size_t i) { return std::cos(i); });
+    fill(y, [&] (size_t i)  { return std::cos(i); });
 
     saxpy(0.5f, x, y);
 
