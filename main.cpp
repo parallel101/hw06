@@ -145,7 +145,7 @@ auto magicfilter(std::vector<T> const &x, std::vector<T> const &y) {
                     local_res[lrsize++] = x[i];
                 } else if (y[i] > x[i] && y[i] > 0.5f) {
                     local_res[lrsize++] = y[i];
-                    local_res[lrsize++] = x[i] + y[i];
+                    local_res[lrsize++] = x[i] * y[i];
                 }
             }
             size_t base = res_size.fetch_add(lrsize);
