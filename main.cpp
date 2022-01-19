@@ -8,6 +8,7 @@
 #include "ticktock.h"
 #include <tbb/parallel_for.h>
 #include <tbb/parallel_reduce.h>
+#include <tbb/concurrent_vector.h>
 
 
 // TODO: 并行化所有这些 for 循环
@@ -80,17 +81,33 @@ T minvalue(std::vector<pod<T>> const &x) {
 }
 
 template<class T>
-std::vector<T> magicfilter(std::vector<T> const &x, std::vector<T> const &y) {
+auto magicfilter(std::vector<T> const &x, std::vector<T> const &y) {
     TICK(magicfilter);
-    std::vector<T> res;
-    for (size_t i = 0; i < std::min(x.size(), y.size()); i++) {
-        if (x[i] > y[i]) {
-            res.push_back(x[i]);
-        } else if (y[i] > x[i] && y[i] > 0.5f) {
-            res.push_back(y[i]);
-            res.push_back(x[i] * y[i]);
+    tbb::concurrent_vector<T> tmp_res;
+
+    tbb::parallel_for(tbb::blocked_range<std::size_t>(0, std::min(x.size(), y.size())), [&](auto r)
+    {
+        std::vector<T> local_res;
+        local_res.reserve(r.size());
+
+        for(auto i = r.begin(); i!=r.end(); ++i)
+        {
+            if (x[i] > y[i]) {
+                local_res.push_back(x[i]);
+            } else if (y[i] > x[i] && y[i] > 0.5f) {
+                local_res.push_back(y[i]);
+                local_res.push_back(x[i] * y[i]);
+            }
         }
-    }
+
+       auto it = tmp_res.grow_by(local_res.size());
+        std::copy(local_res.begin(), local_res.end(), it);
+    });
+
+    std::vector<pod<T>> res;
+    res.reserve(tmp_res.size());
+    std::copy(tmp_res.begin(), tmp_res.end(), std::back_inserter(res));
+
     TOCK(magicfilter);
     return res;
 }
