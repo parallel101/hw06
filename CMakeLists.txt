@@ -13,5 +13,5 @@ add_executable(main main.cpp)
 find_package(TBB REQUIRED)
 target_link_libraries(main PUBLIC TBB::tbb)
 
-#find_package(benchmark REQUIRED)
-#target_link_libraries(main PUBLIC benchmark::benchmark)
+find_package(benchmark REQUIRED)
+target_link_libraries(main PUBLIC benchmark::benchmark)
