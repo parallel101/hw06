@@ -41,7 +41,7 @@ template <class T>
 T sqrtdot(std::vector<T> const &x, std::vector<T> const &y) {
     TICK(sqrtdot);
     T ret = 0;
-    ret = tbb::parallel_deterministic_reduce(
+    ret = tbb::parallel_reduce(
         tbb::blocked_range<size_t>(0, std::min(x.size(), y.size())),
         (T)0,
         [&](tbb::blocked_range<size_t> r, T local_res) {
