@@ -4,16 +4,25 @@
 #include <cmath>
 #include <numeric>
 #include <algorithm>
-#include "ticktock.h"
+#include <atomic>
+#include <tbb/parallel_for.h>
+#include <tbb/parallel_reduce.h>
+#include <tbb/parallel_scan.h>
 
+
+#include "ticktock.h"
+#include "pod.h"
 // TODO: 并行化所有这些 for 循环
 
 template <class T, class Func>
 std::vector<T> fill(std::vector<T> &arr, Func const &func) {
     TICK(fill);
-    for (size_t i = 0; i < arr.size(); i++) {
-        arr[i] = func(i);
-    }
+    //直接并行 ，平均时间：0.0018s
+    tbb::parallel_for(tbb::blocked_range<size_t>(0, arr.size()), [&](const tbb::blocked_range<size_t> &r) {
+        for (size_t i = r.begin(); i != r.end(); i++) {
+            arr[i] = func(i);
+        }
+    });
     TOCK(fill);
     return arr;
 }
@@ -21,19 +30,27 @@ std::vector<T> fill(std::vector<T> &arr, Func const &func) {
 template <class T>
 void saxpy(T a, std::vector<T> &x, std::vector<T> const &y) {
     TICK(saxpy);
-    for (size_t i = 0; i < x.size(); i++) {
-       x[i] = a * x[i] + y[i];
-    }
+    //直接并行 ，平均时间：0.05s
+    tbb::parallel_for(tbb::blocked_range<size_t>(0, x.size()), [&](const tbb::blocked_range<size_t> &r) {
+        for (size_t i = r.begin(); i != r.end(); i++) {
+            x[i] = a * x[i] + y[i];
+        }
+    });
     TOCK(saxpy);
 }
 
 template <class T>
 T sqrtdot(std::vector<T> const &x, std::vector<T> const &y) {
     TICK(sqrtdot);
-    T ret = 0;
-    for (size_t i = 0; i < std::min(x.size(), y.size()); i++) {
-        ret += x[i] * y[i];
-    }
+    //并行缩并 ，平均时间：0.032s
+    T ret = tbb::parallel_reduce(tbb::blocked_range<size_t>(0, x.size()), (T)0,[&](tbb::blocked_range<size_t> &r, T local_res) {
+        for (size_t i = r.begin(); i != r.end(); i++) {
+            local_res += x[i] * y[i];
+        }
+        return local_res;
+    }, [](T a, T b) {
+        return a + b;
+    });
     ret = std::sqrt(ret);
     TOCK(sqrtdot);
     return ret;
@@ -42,27 +59,45 @@ T sqrtdot(std::vector<T> const &x, std::vector<T> const &y) {
 template <class T>
 T minvalue(std::vector<T> const &x) {
     TICK(minvalue);
-    T ret = x[0];
-    for (size_t i = 1; i < x.size(); i++) {
-        if (x[i] < ret)
-            ret = x[i];
-    }
+    //并行缩并求最小值 ，平均时间：0.015s
+    T ret = tbb::parallel_reduce(tbb::blocked_range<size_t>(0, x.size()), (T)0,[&](tbb::blocked_range<size_t> &r, T local_res) {
+        for (size_t i = r.begin(); i != r.end(); i++) {
+            if (x[i] < local_res)
+                local_res = x[i];
+        }
+        return local_res;
+    }, [](T a, T b) {
+        return std::min(a, b);
+    });
     TOCK(minvalue);
     return ret;
 }
 
 template <class T>
-std::vector<T> magicfilter(std::vector<T> const &x, std::vector<T> const &y) {
+auto magicfilter(std::vector<T> const &x, std::vector<T> const &y) {
+    std::vector<pod<T>> res;
+    std::atomic<size_t> res_size = 0;
+    //使用彭老师的头文件，平均时间：0.06s
     TICK(magicfilter);
-    std::vector<T> res;
-    for (size_t i = 0; i < std::min(x.size(), y.size()); i++) {
-        if (x[i] > y[i]) {
-            res.push_back(x[i]);
-        } else if (y[i] > x[i] && y[i] > 0.5f) {
-            res.push_back(y[i]);
-            res.push_back(x[i] * y[i]);
+    res.resize(x.size());
+    tbb::parallel_for(tbb::blocked_range<size_t>(0, x.size()),
+            [&](const tbb::blocked_range<size_t> &r) {
+        std::vector<pod<T>> local_a(r.size());
+        size_t lasize = 0;
+        for (size_t i = r.begin(); i != r.end(); i++) {
+            if(x[i]>y[i]){
+                local_a[lasize++] = x[i];
+            } else if(y[i] > x[i] && y[i] >0.5f){
+                local_a[lasize++] = y[i];
+                local_a[lasize++] = x[i] * y[i];
+            }
         }
-    }
+        size_t base = res_size.fetch_add(lasize);
+        for(size_t i=0;i<lasize;i++){
+            res[base+i] = local_a[i];
+        }
+    });
+    res.resize(res_size);
     TOCK(magicfilter);
     return res;
 }
@@ -70,11 +105,20 @@ std::vector<T> magicfilter(std::vector<T> const &x, std::vector<T> const &y) {
 template <class T>
 T scanner(std::vector<T> &x) {
     TICK(scanner);
+    //平均时间：0.06s
     T ret = 0;
-    for (size_t i = 0; i < x.size(); i++) {
-        ret += x[i];
-        x[i] = ret;
-    }
+    tbb::task_arena ta(4);
+    ta.execute([&] {
+        ret = tbb::parallel_scan(tbb::blocked_range<size_t>(0, x.size()),T(0), [&](const tbb::blocked_range<size_t> &r, T local_res,auto is_final) {
+            for (size_t i = r.begin(); i != r.end(); i++) {
+                local_res += x[i];
+                if(is_final)x[i] = local_res;
+            }
+            return local_res;
+        },[] (T x, T y) {
+            return x + y;
+        },tbb::auto_partitioner());
+    });
     TOCK(scanner);
     return ret;
 }
