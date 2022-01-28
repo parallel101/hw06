@@ -62,14 +62,23 @@ T minvalue(std::vector<T> const &x) {
     TICK(minvalue);
     T ret = x[0];
     const size_t n = x.size();
-    tbb::parallel_for(tbb::blocked_range<size_t>(0,n),
-                      [&](tbb::blocked_range<size_t> r){
-                          for(size_t i = r.begin() ; i < r.end() ; ++i){
-                              if(x[i] < ret){
-                                  ret = x[i];
-                              }
-                          }
-                      });
+//     tbb::parallel_for(tbb::blocked_range<size_t>(0,n),
+//                       [&](tbb::blocked_range<size_t> r){
+//                           for(size_t i = r.begin() ; i < r.end() ; ++i){
+//                               if(x[i] < ret){
+//                                   ret = x[i];
+//                               }
+//                           }
+//                       });
+    tbb::parallel_reduce(tbb::blocked_range<size_t>(0, n),(T) x[0],
+                         [&](tbb::blocked_range<size_t> r, T local_min){
+                             for(size_t i = r.begin(); i < r.end() ; i++){
+                                 local_min = min(local_min,x[i]);
+                             }
+                             return local_min;},
+                         [](T x, T y){
+                             return min(x,y);
+                         });
     TOCK(minvalue);
     return ret;
 }
