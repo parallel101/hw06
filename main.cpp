@@ -18,7 +18,6 @@ template <class T, class Func>
 std::vector<T> fill(std::vector<T> &arr, Func const &func) {
     TICK(fill);
     const size_t n = arr.size();
-    tbb::task_arena ta(4);
     tbb::parallel_for((size_t)0, (size_t)n,[&](size_t i){
         arr[i] = func(i);
     });
@@ -82,7 +81,7 @@ std::vector<T> magicfilter(std::vector<T> const &x, std::vector<T> const &y) {
     std::mutex mtx;
     const size_t n = min(x.size(),y.size());
     res.reserve(n);
-    tbb::task_arena ta(4);
+    tbb::task_arena ta(6);
     ta.execute([&]{
         tbb::parallel_for(tbb::blocked_range<size_t>(0,n),
                           [&](tbb::blocked_range<size_t> r){
