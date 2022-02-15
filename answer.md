@@ -36,3 +36,12 @@ scanner: 0.0386962s
 6.19267e+07
 
 ```
+
+# 加速比
+
+- `fill`: 4.9
+- `saxpy`: 1.15
+- `sqrtdot`: 2.5
+- `minvalue`: 4.15
+- `magicfilter`: 1.07
+- `scanner`: 1.33
