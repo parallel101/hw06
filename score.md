@@ -1,55 +1,41 @@
 # 原版
 
-fill: 0.691299s
-fill: 0.694203s
-saxpy: 0.0268882s
-sqrtdot: 0.0655007s
+fill: 0.728694s
+fill: 0.74406s
+saxpy: 0.0409412s
+sqrtdot: 0.0724723s
 5165.4
-minvalue: 0.0654602s
+minvalue: 0.0691992s
 -1.11803
-magicfilter: 0.280727s
+magicfilter: 0.371052s
 55924034
-scanner: 0.0651282s
+scanner: 0.0702286s
 6.18926e+07
 
 # 2
 
-fill: 0.135927s
-fill: 0.135436s
-saxpy: 0.0261193s
-sqrtdot: 0.0166558s
+fill: 0.110683s
+fill: 0.10929s
+saxpy: 0.0116205s
+sqrtdot: 0.011483s
 5792.62
-minvalue: 0.00855201s
+minvalue: 0.00942511s
 -1.11803
-magicfilter: 0.0343181s
+magicfilter: 0.0292501s
 55924034
-scanner: 0.0292899s
-6.19238e+07
+scanner: 0.0187589s
+6.19048e+07
 
 # 3
-
-fill: 0.151911s
-fill: 0.149576s
-saxpy: 0.0256344s
-sqrtdot: 0.0161882s
-5792.61
-minvalue: 0.00839197s
+只是针对parallel scan，发现手动划分task并行比parallel_scan更快，应该是我没找到最佳的partitioner，但是我测试了好几种都是手动划分更快
+fill: 0.111643s
+fill: 0.113284s
+saxpy: 0.0120721s
+sqrtdot: 0.0143203s
+5792.62
+minvalue: 0.00966027s
 -1.11803
-magicfilter: 0.174838s
+magicfilter: 0.0297295s
 55924034
-scanner: 0.0305014s
-6.19266e+07
-
-# 4
-
-fill: 0.135299s
-fill: 0.135698s
-saxpy: 0.0259649s
-sqrtdot: 0.016133s
-5792.63
-minvalue: 0.0083628s
--1.11803
-magicfilter: 0.0378731s
-55924034
-scanner: 0.0257618s
-6.19406e+07
+scanner: 0.016231s
+6.19332e+07
