@@ -1,0 +1,11 @@
+fill: 0.130924s
+fill: 0.132913s
+saxpy: 0.0101733s
+sqrtdot: 0.0241576s
+5792.62
+minvalue: 0.0222686s
+-1.11803
+magicfilter: 0.115075s
+55924034
+scanner: 0.0292774s
+0
