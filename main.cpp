@@ -8,6 +8,7 @@
 #include <tbb/parallel_for.h>
 #include <tbb/parallel_reduce.h>
 #include <tbb/parallel_scan.h>
+#include "pod.h"
 
 // TODO: 并行化所有这些 for 循环
 
@@ -88,9 +89,9 @@ T minvalue(std::vector<T> const &x) {
 }
 
 template <class T>
-std::vector<T> magicfilter(std::vector<T> const &x, std::vector<T> const &y) {
+auto magicfilter(std::vector<T> const &x, std::vector<T> const &y) {
     TICK(magicfilter);
-    std::vector<T> res;
+    std::vector<pod<T>> res;
 
     std::atomic<size_t> a_size=0;
     size_t n = std::min(x.size(), y.size());
@@ -100,7 +101,7 @@ std::vector<T> magicfilter(std::vector<T> const &x, std::vector<T> const &y) {
     ta.execute([&]{
         tbb::parallel_for(tbb::blocked_range<size_t>(0,n),
               [&](tbb::blocked_range<size_t> r){
-                  std::vector<T> la(r.size());
+                  std::vector<pod<T>> la(r.size());
                   size_t la_idx=0;
                   for (size_t i = r.begin(); i < r.end(); i++) {
                       if (x[i] > y[i]) {
