@@ -105,7 +105,7 @@ std::vector<pod<T>> magicfilter(std::vector<pod<T>> const &x, std::vector<pod<T>
 }
 
 template <class T>
-T scanner(std::vector<T> &x) {
+T scanner(std::vector<pod<T>> &x) {
     TICK(scanner);
 	size_t n = x.size();
 	T res = tbb::parallel_scan(tbb::blocked_range<size_t>(0, n), (float)0, 
